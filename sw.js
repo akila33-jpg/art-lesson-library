@@ -1,11 +1,13 @@
 // 離線快取：第一次打開後，沒有網路也能使用。改版時把 VERSION 加 1。
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CORE = ['./', 'index.html', 'assets/site.css', 'assets/app.js', 'data/lessons.json', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(async c => {
     await c.addAll(CORE);
     try { const d = await (await fetch('data/lessons.json')).json();
-      const imgs = new Set(); d.forEach(l => { [l.cover, l.diagram, ...(l.handouts||[]).map(h=>h.src), ...(l.photos||[]).map(p=>`images/${l.id}/${p.file}`)].filter(Boolean).forEach(u => imgs.add(u)); });
+      const imgs = new Set(); d.forEach(l => {
+        [l.cover, l.diagram, l.deck&&l.deck.pdf, ...(l.handouts||[]).map(h=>h.src), ...(l.photos||[]).map(p=>`images/${l.id}/${p.file}`), ...((l.deck&&l.deck.slides)||[])].filter(Boolean).forEach(u => imgs.add(u));
+      });
       await Promise.all([...imgs].map(u => c.add(u).catch(() => {})));
     } catch (_) {}
   }));

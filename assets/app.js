@@ -5,6 +5,8 @@ const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const app = $('#app');
 let LESSONS = [];
+const hasDeck = l => !!(l.deck && l.deck.slides && l.deck.slides.length);
+const shareLabel = s => s==='anyoneWithLink' || s==='anyoneCanFind' ? '公開連結，任何人開得開' : '原檔未公開分享，需老師的雲端帳號才開得開';
 const MASTERWORKS = 'https://akila33-jpg.github.io/moving-art-class-masterworks/';
 const AGE_ORDER = ['幼兒','兒童','青少年','成人','長輩'];
 const DUR = [
@@ -21,12 +23,13 @@ const GROUPS = [
   {key:'theme', label:'主題', get:l=>l.themes},
   {key:'season', label:'節令', get:l=>l.season},
   {key:'dur', label:'時長', get:l=>DUR.filter(x=>x.f(l.duration)).map(x=>x.k), order:DUR.map(x=>x.k)},
+  {key:'deck', label:'簡報', get:l=>hasDeck(l)?['有上課簡報']:['僅步驟簡報'], order:['有上課簡報','僅步驟簡報']},
 ];
 
 /* ---------- helpers ---------- */
 function haystack(l){
   const parts=[l.id,l.title,l.subtitle,l.summary,l.unit,...l.ages,...l.students,...l.themes,...l.media,...l.season,...l.tags,l.series,
-    ...l.goals,...l.materials,...l.steps.map(s=>s.t+' '+s.d),...l.adapt];
+    ...l.goals,...l.materials,...l.steps.map(s=>s.t+' '+s.d),...l.adapt, hasDeck(l)?'上課簡報 教學簡報':'步驟簡報'];
   l.sections.forEach(s=>{parts.push(s.h); s.rows.forEach(r=>parts.push(r.join(' ')));});
   return parts.join(' ').toLowerCase();
 }
@@ -38,7 +41,7 @@ function art(l){
 }
 function card(l){
   return `<a class="card reveal" href="#/lesson/${l.id}" style="--c:${l.color}">
-    ${art(l)}${l.status==='新教案'?'<span class="badge">新教案</span>':l.status==='規劃中'?'<span class="badge">長期計畫</span>':''}
+    ${art(l)}${l.status==='新教案'?'<span class="badge">新教案</span>':l.status==='規劃中'?'<span class="badge">長期計畫</span>':''}${hasDeck(l)?'<span class="badge deck">上課簡報</span>':''}
     <div class="body"><h3>${esc(l.title)}</h3>${l.subtitle?`<p class="sub">${esc(l.subtitle)}</p>`:''}
     <p class="sum">${esc(l.summary)}</p>
     <div class="pills"><span class="pill strong">${esc(l.durationText)}</span>${l.ages.slice(0,3).map(a=>`<span class="pill">${esc(a)}</span>`).join('')}${l.media.slice(0,2).map(a=>`<span class="pill">${esc(a)}</span>`).join('')}</div></div></a>`;
@@ -84,8 +87,8 @@ function home(){
   <section class="sec wrap"><div class="sec-head"><div><h2>系列｜與藝術家對談</h2><p>梵谷、草間彌生、蒙德里安、北齋、畢卡索：把名畫拆成簡單的形狀與顏色。</p></div></div>
     <div class="grid">${LESSONS.filter(l=>l.series==='與藝術家對談'&&!l.featured).map(card).join('')}</div></section>
   <section class="sec wrap"><div class="block" style="--c:#2f5a34"><h2><span class="ic">✦</span>上課時怎麼用？</h2>
-    <div class="two"><ul class="ticks"><li>用上方搜尋或「找教案」篩選年齡、學生類別、媒材。</li><li>打開教案頁，按「簡報模式」就能在電視或投影幕上一步一步翻頁。</li><li>簡報可用鍵盤方向鍵、簡報筆或點畫面左右側翻頁。</li></ul>
-    <ul class="ticks"><li>按「列印／存成 PDF」帶紙本進教室。</li><li>網頁打開過一次後，沒有網路也能使用。</li><li>每份教案都附「調整方式」，可依學員能力增減。</li></ul></div></div></section>
+    <div class="two"><ul class="ticks"><li>用上方搜尋或「找教案」篩選年齡、學生類別、媒材。</li><li>打開教案頁，有上課簡報的會出現「上課簡報」按鈕，可直接投影原簡報畫面；沒有的也可以用「簡報模式」大字翻頁。</li><li>簡報可用鍵盤方向鍵、簡報筆或點畫面左右側翻頁。</li></ul>
+    <ul class="ticks"><li>按「列印／存成 PDF」帶紙本進教室。也可到「上課簡報」總覽一次看全部簡報。</li><li>網頁打開過一次後，沒有網路也能使用。</li><li>每份教案都附「調整方式」，可依學員能力增減。</li></ul></div></div></section>
   </div>`;
   $('#hs').addEventListener('submit',e=>{e.preventDefault();location.hash='#/find?q='+encodeURIComponent($('#hq').value.trim());});
   observe();
@@ -122,6 +125,24 @@ function rowsHTML(rows){
   const flush=()=>{if(tbl.length){out+=`<table class="tb">${tbl.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>`;tbl=[];}};
   rows.forEach(r=>{if(r.length>1)tbl.push(r);else{flush();out+=`<p>${esc(r[0])}</p>`;}});flush();return out;
 }
+function deckSection(l){
+  const d=l.deck;
+  if(!d) return `<section class="block"><h2><span class="ic">▣</span>上課簡報</h2><p>這堂課目前用網站內建的「簡報模式」：標題、材料與每個步驟各一頁，字夠大，可直接投影上課。</p><p><a class="btn" href="#/present/${l.id}">▶ 打開步驟簡報</a></p></section>`;
+  const slides=d.slides||[];
+  const orig=(d.originals||[]).map(o=>`<li><a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.label)}</a><span class="sharetag ${o.sharing==='anyoneWithLink'||o.sharing==='anyoneCanFind'?'':'private'}">${shareLabel(o.sharing)}</span></li>`).join('');
+  let html=`<section class="block deckbox"><h2><span class="ic">▣</span>上課簡報</h2>`;
+  if(slides.length){
+    html+=`<p>共 ${slides.length} 頁，可在教室電視或投影幕上全螢幕翻頁；打開過一次後，沒有網路也能看。</p>
+      <div class="thumbs">${slides.slice(0,8).map((s,i)=>`<a href="#/present/${l.id}"><img src="${esc(s)}" alt="第 ${i+1} 頁預覽" loading="lazy"></a>`).join('')}</div>
+      <div class="actions" style="margin:8px 0 16px">${[`<a class="btn" href="#/present/${l.id}">▶ 上課簡報</a>`,`<a class="btn ghost" href="#/present/${l.id}?kind=steps">步驟簡報</a>`,d.pdf?`<a class="btn ghost" href="${esc(d.pdf)}" target="_blank" rel="noopener">下載 PDF</a>`:''].join('')}</div>`;
+  }else{
+    html+=`<p><a class="btn" href="#/present/${l.id}?kind=steps">▶ 步驟簡報</a></p>`;
+  }
+  if(d.note) html+=`<p class="note">${esc(d.note)}</p>`;
+  if(orig) html+=`<p>原始檔案：</p><ul class="origlist">${orig}</ul>`;
+  html+=`</section>`;
+  return html;
+}
 function lesson(id){
   const l=LESSONS.find(x=>x.id===id); if(!l) return notFound();
   setTitle(l.title); navActive('find');
@@ -130,9 +151,10 @@ function lesson(id){
   <header class="lhero"><div class="wrap"><div class="crumb"><a href="#/find">← 找教案</a></div>
     <h1>${esc(l.title)}</h1>${l.subtitle?`<p class="sub">${esc(l.subtitle)}</p>`:''}<p class="sum">${esc(l.summary)}</p>
     <div class="pills">${l.tags.map(t=>`<a class="pill" href="#/find?q=${encodeURIComponent(t)}">#${esc(t)}</a>`).join('')}</div>
-    <div class="actions"><a class="btn" href="#/present/${l.id}">▶ 簡報模式</a><button class="btn ghost" id="print" type="button">列印／存成 PDF</button></div></div></header>
+    <div class="actions">${hasDeck(l)?`<a class="btn" href="#/present/${l.id}">▶ 上課簡報</a><a class="btn ghost" href="#/present/${l.id}?kind=steps">步驟簡報</a>`:`<a class="btn" href="#/present/${l.id}">▶ 簡報模式</a>`}<button class="btn ghost" id="print" type="button">列印／存成 PDF</button></div></div></header>
   <div class="wrap">
     <div class="factgrid">${facts.map(([k,v])=>`<div class="fact"><b>${k}</b><span>${esc(v||'—')}</span></div>`).join('')}</div>
+    ${deckSection(l)}
     <div class="two">
       <section class="block"><h2><span class="ic">◎</span>課程目標</h2><ul class="ticks">${l.goals.map(g=>`<li>${esc(g)}</li>`).join('')||'<li>見完整教案</li>'}</ul></section>
       <section class="block"><h2><span class="ic">✎</span>媒材清單</h2><ul class="ticks">${l.materials.map(g=>`<li>${esc(g)}</li>`).join('')||'<li>見完整教案</li>'}</ul></section>
@@ -165,6 +187,8 @@ function resources(){
   const refs=[];const seen=new Set();LESSONS.forEach(l=>l.refs.forEach(r=>{if(!seen.has(r.url)){seen.add(r.url);refs.push({...r,l});}}));
   const toolbox=(LESSONS.find(l=>l.id==='L003')||{sections:[]}).sections.find(s=>s.h.includes('工具箱'));
   app.innerHTML=`<div class="view wrap sec"><h1>教學資源</h1><p class="prose">課堂上會用到的網站、繪本、材料與教具，整理在這裡。</p>
+  <section class="block reveal" style="--c:#8a4b14"><h2><span class="ic">▣</span>上課簡報</h2>
+    <p>老師做過的投影片已放到網站上，可直接在教室打開翻頁。到 <a href="#/decks">上課簡報總覽</a> 一次看全部。</p></section>
   <section class="sec">${featureMasterworks()}</section>
   <section class="block reveal" style="--c:#6b4aa0"><h2><span class="ic">❑</span>繪本清單</h2><ul class="ticks">
     <li><b>十二生肖立體書</b>（老師自備）— 搭配 <a href="#/lesson/L017">彩虹刮畫十二生肖</a>：老師翻頁，大家一起找生肖、學動物的聲音與動作。</li>
@@ -201,9 +225,7 @@ function about(){
 }
 
 /* ---------- presenter ---------- */
-function present(id){
-  const l=LESSONS.find(x=>x.id===id); if(!l) return notFound();
-  setTitle('簡報｜'+l.title);
+function builtInSlides(l){
   const S=[];
   S.push(`<div class="k">美術課｜${esc(l.durationText)}</div><h1>${esc(l.title)}</h1>${l.subtitle?`<p>${esc(l.subtitle)}</p>`:''}`);
   if(l.goals.length) S.push(`<div class="k">今天我們要</div><ul>${l.goals.slice(0,4).map(g=>`<li>${esc(g)}</li>`).join('')}</ul>`);
@@ -217,8 +239,18 @@ function present(id){
   });
   if(l.diagram) S.push({light:true,h:`<img class="full" src="${esc(l.diagram)}" alt="步驟圖">`});
   S.push(`<div class="k">分享時間</div><h1>完成了！</h1><p>說說看：你最喜歡作品的哪裡？</p>`);
-  const deck=document.createElement('div');deck.className='deck';deck.setAttribute('role','dialog');deck.setAttribute('aria-label','簡報模式');
-  deck.innerHTML=`<div class="prog"><i></i></div><div class="stage">${S.map((s,i)=>{const o=typeof s==='string'?{h:s}:s;return `<section class="slide ${o.light?'light':''}" style="--c:${l.color}" aria-hidden="true">${o.h}</section>`;}).join('')}<div class="hint">← → 方向鍵、簡報筆或點畫面左右翻頁｜F 全螢幕｜Esc 離開</div></div>
+  return S;
+}
+function present(id, qs){
+  const l=LESSONS.find(x=>x.id===id); if(!l) return notFound();
+  const kind=new URLSearchParams(qs||'').get('kind');
+  const visual=hasDeck(l) && kind!=='steps';
+  setTitle((visual?'上課簡報｜':'簡報｜')+l.title);
+  const S=visual
+    ? l.deck.slides.map((src,i)=>({light:true,img:true,h:`<img src="${esc(src)}" alt="${esc(l.title)} 第 ${i+1} 頁" decoding="async">`}))
+    : builtInSlides(l);
+  const deck=document.createElement('div');deck.className='deck';deck.setAttribute('role','dialog');deck.setAttribute('aria-label',visual?'上課簡報':'簡報模式');
+  deck.innerHTML=`<div class="prog"><i></i></div><div class="stage">${S.map((s,i)=>{const o=typeof s==='string'?{h:s}:s;return `<section class="slide ${o.light?'light':''} ${o.img?'imgslide':''}" style="--c:${l.color}" aria-hidden="true">${o.h}</section>`;}).join('')}<div class="hint">← → 方向鍵、簡報筆或點畫面左右翻頁｜F 全螢幕｜Esc 離開</div></div>
   <div class="bar"><button type="button" data-a="x">✕ 離開</button><button type="button" data-a="p">◀ 上一頁</button><button type="button" data-a="n">下一頁 ▶</button><button type="button" data-a="f">全螢幕</button><span class="pos"></span></div>`;
   document.body.appendChild(deck);document.body.style.overflow='hidden';
   const slides=[...deck.querySelectorAll('.slide')];let i=0;
@@ -241,6 +273,25 @@ function present(id){
   show(0);
 }
 
+function decks(){
+  setTitle('上課簡報'); navActive('decks');
+  const withSlides=LESSONS.filter(hasDeck);
+  const onlySteps=LESSONS.filter(l=>!hasDeck(l));
+  const card=l=>`<a class="deckcard reveal" href="#/present/${l.id}">
+    <img src="${esc(l.deck.slides[0])}" alt="${esc(l.title)} 簡報封面" loading="lazy">
+    <div class="body"><h3>${esc(l.title)}</h3><p class="note" style="margin:0">${esc(l.id)} ｜ ${l.deck.slides.length} 頁${l.deck.pdf?' ｜ 可下載 PDF':''}</p>
+    <span class="btn" style="margin-top:12px">▶ 打開上課簡報</span></div></a>`;
+  app.innerHTML=`<div class="view wrap sec">
+    <h1>上課簡報</h1>
+    <p class="lede" style="text-align:left;margin:0 0 28px">把老師做過的 PowerPoint／教學簡報放到網站上，上課時打開就能投影。畫面存在這個網站裡，打開過一次後沒有網路也能翻頁。若原檔在雲端且未公開分享，下方會註明，不影響網站上的簡報使用。</p>
+    <div class="sec-head"><div><h2>可直接投影的簡報</h2><p>共 ${withSlides.length} 份。點進去就是課堂畫面。</p></div></div>
+    <div class="grid">${withSlides.map(card).join('')}</div>
+    <div class="sec-head" style="margin-top:48px"><div><h2>目前用步驟簡報的教案</h2><p>這些課還沒有另外的投影片檔，網站會依步驟自動做成大字簡報，一樣可以上課用。</p></div></div>
+    <ul class="clean">${onlySteps.map(l=>`<li><a href="#/present/${l.id}">${esc(l.id)} ${esc(l.title)}</a> ｜ <a href="#/lesson/${l.id}">看教案</a></li>`).join('')}</ul>
+  </div>`;
+  observe();
+}
+
 function notFound(){app.innerHTML=`<div class="view wrap sec"><h1>找不到這一頁</h1><p><a href="#/">回首頁</a></p></div>`;}
 
 /* lightbox for diagrams */
@@ -257,7 +308,8 @@ function route(){
   if(!seg.length) home();
   else if(seg[0]==='find') find(qs);
   else if(seg[0]==='lesson') lesson(seg[1]);
-  else if(seg[0]==='present'){ if(!$('#app .lhero')) lesson(seg[1]); present(seg[1]); return; }
+  else if(seg[0]==='present'){ if(!$('#app .lhero')) lesson(seg[1]); present(seg[1], qs); return; }
+  else if(seg[0]==='decks') decks();
   else if(seg[0]==='records') records();
   else if(seg[0]==='resources') resources();
   else if(seg[0]==='parents') parents();
