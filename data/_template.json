@@ -86,5 +86,13 @@
  "handouts": [],
  "diagram": "",
  "photos": [],
- "status": "新教案"
+ "status": "新教案",
+ "deck": {
+  "title": "上課簡報",
+  "pages": 0,
+  "slides": [],
+  "pdf": "",
+  "note": "",
+  "originals": []
+ }
 }
