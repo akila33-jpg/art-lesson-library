@@ -1,5 +1,5 @@
 // 離線快取：第一次打開後，沒有網路也能使用。改版時把 VERSION 加 1。
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CORE = ['./', 'index.html', 'assets/site.css', 'assets/app.js', 'data/lessons.json', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(async c => {
